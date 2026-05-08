@@ -3,8 +3,12 @@ set -eu
 
 TG_PID=""
 BOT_PID=""
+MONITOR_PID=""
 
 cleanup() {
+  if [ -n "$MONITOR_PID" ]; then
+    kill "$MONITOR_PID" 2>/dev/null || true
+  fi
   if [ -n "$BOT_PID" ]; then
     kill "$BOT_PID" 2>/dev/null || true
   fi
@@ -13,7 +17,7 @@ cleanup() {
   fi
 }
 
-trap cleanup INT TERM
+trap cleanup EXIT INT TERM
 
 LOCAL_TELEGRAM_API="$(printf '%s' "${USE_LOCAL_TELEGRAM_API:-0}" | tr '[:upper:]' '[:lower:]')"
 
@@ -104,5 +108,28 @@ fi
 echo "Starting transcriber bot"
 python /app/main.py &
 BOT_PID="$!"
+
+if [ -n "$TG_PID" ]; then
+  (
+    while kill -0 "$BOT_PID" 2>/dev/null; do
+      if ! kill -0 "$TG_PID" 2>/dev/null; then
+        echo "Local Telegram Bot API stopped while bot was running" >&2
+        kill "$BOT_PID" 2>/dev/null || true
+        exit 1
+      fi
+      sleep 2
+    done
+  ) &
+  MONITOR_PID="$!"
+fi
+
+set +e
 wait "$BOT_PID"
-cleanup
+BOT_STATUS="$?"
+set -e
+
+if [ -n "$MONITOR_PID" ]; then
+  kill "$MONITOR_PID" 2>/dev/null || true
+fi
+
+exit "$BOT_STATUS"
