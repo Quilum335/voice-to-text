@@ -680,8 +680,8 @@ class TranscriptionBot:
                 chat_id,
                 (
                     "Файл больше 20 MB. Обычный api.telegram.org такие файлы ботам не отдает.\n\n"
-                    "Для длинных записей на Railway нужно добавить локальный Telegram Bot API Server "
-                    "и указать TELEGRAM_API_BASE. Для маленьких голосовых можно слать как сейчас."
+                    "Для длинных записей на Railway включи USE_LOCAL_TELEGRAM_API=1, "
+                    "добавь TELEGRAM_API_ID и TELEGRAM_API_HASH, затем дождись успешного redeploy."
                 ),
                 reply_to_message_id=message["message_id"],
             )
