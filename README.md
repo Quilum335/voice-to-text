@@ -51,6 +51,27 @@ TELEGRAM_SSL_VERIFY=0
 TELEGRAM_CA_FILE=C:\path\to\root-ca.pem
 ```
 
+## Локальный запуск
+
+Через `python .\main.py` работает только обычный Telegram API, поэтому файлы больше 20 MB не скачаются.
+
+Для больших файлов запускай контейнер, потому что `start.sh` внутри него поднимает локальный Telegram Bot API Server:
+
+```powershell
+docker compose up --build
+```
+
+В `.env` для такого режима поставь:
+
+```env
+USE_LOCAL_TELEGRAM_API=1
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+WORK_DIR=/data/bot-transcriber
+DB_PATH=/data/bot-transcriber/bot.sqlite3
+HF_HOME=/data/huggingface
+```
+
 ## Про большие файлы Telegram
 
 Обычный `https://api.telegram.org` дает ботам скачивать файлы только до 20 MB. Поэтому длинные записи будут работать только если они сильно сжаты и меньше лимита.
