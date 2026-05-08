@@ -41,13 +41,18 @@
 
 Обычный `https://api.telegram.org` дает ботам скачивать файлы только до 20 MB. Поэтому длинные записи будут работать только если они сильно сжаты и меньше лимита.
 
-Для настоящих 4+ часов нужен локальный Telegram Bot API Server. Тогда укажи:
+Для настоящих 4+ часов включи локальный Telegram Bot API Server в этом же контейнере:
 
 ```env
-TELEGRAM_API_BASE=http://your-local-bot-api-service:8081
+USE_LOCAL_TELEGRAM_API=1
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+AUTO_TELEGRAM_LOGOUT=1
+TELEGRAM_WORK_DIR=/data/telegram-bot-api
+TELEGRAM_TEMP_DIR=/tmp/telegram-bot-api
 ```
 
-Если сервер запущен в `--local` режиме и возвращает абсолютные пути к файлам, бот должен видеть эти пути через общий volume или быть в том же контейнере.
+`TELEGRAM_API_ID` и `TELEGRAM_API_HASH` берутся на https://my.telegram.org/apps. При `USE_LOCAL_TELEGRAM_API=1` переменную `TELEGRAM_API_BASE` руками ставить не нужно: `start.sh` сам переключит бота на `http://127.0.0.1:8081`.
 
 ## Качество и скорость
 
