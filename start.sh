@@ -44,6 +44,7 @@ except Exception as exc:
 PY
   fi
 
+  echo "Starting local Telegram Bot API on 127.0.0.1:8081"
   telegram-bot-api \
     --api-id="$TELEGRAM_API_ID" \
     --api-hash="$TELEGRAM_API_HASH" \
@@ -56,9 +57,51 @@ PY
   TG_PID="$!"
 
   export TELEGRAM_API_BASE="http://127.0.0.1:8081"
-  sleep 3
+
+  echo "Waiting for local Telegram Bot API to become ready"
+  READY="0"
+  WAITED="0"
+  READY_TIMEOUT="${TELEGRAM_API_READY_TIMEOUT:-120}"
+  while [ "$WAITED" -lt "$READY_TIMEOUT" ]; do
+    if ! kill -0 "$TG_PID" 2>/dev/null; then
+      echo "Local Telegram Bot API exited before it became ready" >&2
+      wait "$TG_PID" || true
+      exit 1
+    fi
+
+    if python - "$BOT_TOKEN" <<'PY'
+import json
+import sys
+import urllib.request
+
+token = sys.argv[1]
+url = f"http://127.0.0.1:8081/bot{token}/getMe"
+try:
+    with urllib.request.urlopen(url, timeout=2) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    if payload.get("ok"):
+        print("Local Telegram Bot API is ready")
+        raise SystemExit(0)
+except Exception:
+    pass
+raise SystemExit(1)
+PY
+    then
+      READY="1"
+      break
+    fi
+
+    sleep 2
+    WAITED=$((WAITED + 2))
+  done
+
+  if [ "$READY" != "1" ]; then
+    echo "Local Telegram Bot API was not ready after ${READY_TIMEOUT}s" >&2
+    exit 1
+  fi
 fi
 
+echo "Starting transcriber bot"
 python /app/main.py &
 BOT_PID="$!"
 wait "$BOT_PID"
