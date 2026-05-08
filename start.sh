@@ -34,13 +34,18 @@ if [ "$LOCAL_TELEGRAM_API" = "1" ] || [ "$LOCAL_TELEGRAM_API" = "true" ] || [ "$
   if [ "${AUTO_TELEGRAM_LOGOUT:-1}" = "1" ] && [ -n "${BOT_TOKEN:-}" ]; then
     python - "$BOT_TOKEN" <<'PY' || true
 import json
+import os
+import ssl
 import sys
 import urllib.request
 
 token = sys.argv[1]
 url = f"https://api.telegram.org/bot{token}/logOut"
 try:
-    with urllib.request.urlopen(url, timeout=20) as response:
+    context = None
+    if os.getenv("TELEGRAM_SSL_VERIFY", "1").strip().lower() in {"0", "false", "no", "off"}:
+        context = ssl._create_unverified_context()
+    with urllib.request.urlopen(url, timeout=20, context=context) as response:
         payload = json.loads(response.read().decode("utf-8"))
     print(f"Official Telegram API logOut: {payload.get('ok')}")
 except Exception as exc:
