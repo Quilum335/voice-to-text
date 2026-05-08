@@ -60,6 +60,11 @@ class Settings:
         if not token:
             raise RuntimeError("BOT_TOKEN is required")
 
+        use_local_telegram_api = env_flag("USE_LOCAL_TELEGRAM_API")
+        telegram_api_base = os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/")
+        if use_local_telegram_api:
+            telegram_api_base = "http://127.0.0.1:8081"
+
         work_dir = Path(os.getenv("WORK_DIR", "/tmp/bot-transcriber")).resolve()
         db_path = Path(os.getenv("DB_PATH", str(work_dir / "bot.sqlite3"))).resolve()
 
@@ -69,7 +74,7 @@ class Settings:
 
         return cls(
             bot_token=token,
-            telegram_api_base=os.getenv("TELEGRAM_API_BASE", "https://api.telegram.org").rstrip("/"),
+            telegram_api_base=telegram_api_base,
             work_dir=work_dir,
             db_path=db_path,
             default_language=default_language,
@@ -82,6 +87,10 @@ class Settings:
             whisper_prompt=os.getenv("WHISPER_PROMPT", "").strip(),
             max_concurrent_jobs=max(1, int(os.getenv("MAX_CONCURRENT_JOBS", "1"))),
         )
+
+
+def env_flag(name: str, default: str = "0") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
 class TelegramError(RuntimeError):
@@ -857,6 +866,7 @@ async def main() -> None:
         format="%(asctime)s %(levelname)s %(message)s",
     )
     settings = Settings.from_env()
+    logging.info("Telegram API base: %s", settings.telegram_api_base)
     settings.work_dir.mkdir(parents=True, exist_ok=True)
     store = Store(settings.db_path)
     store.mark_unfinished_interrupted()

@@ -15,7 +15,9 @@ cleanup() {
 
 trap cleanup INT TERM
 
-if [ "${USE_LOCAL_TELEGRAM_API:-0}" = "1" ]; then
+LOCAL_TELEGRAM_API="$(printf '%s' "${USE_LOCAL_TELEGRAM_API:-0}" | tr '[:upper:]' '[:lower:]')"
+
+if [ "$LOCAL_TELEGRAM_API" = "1" ] || [ "$LOCAL_TELEGRAM_API" = "true" ] || [ "$LOCAL_TELEGRAM_API" = "yes" ] || [ "$LOCAL_TELEGRAM_API" = "on" ]; then
   if [ -z "${TELEGRAM_API_ID:-}" ] || [ -z "${TELEGRAM_API_HASH:-}" ]; then
     echo "USE_LOCAL_TELEGRAM_API=1 requires TELEGRAM_API_ID and TELEGRAM_API_HASH" >&2
     exit 1
