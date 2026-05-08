@@ -37,6 +37,20 @@
 
 Первый запуск скачает модель с Hugging Face. Это бесплатно, но может занять несколько минут.
 
+## Локальный SSL на Windows
+
+Если при локальном запуске падает `SSLCertVerificationError: self-signed certificate in certificate chain`, значит HTTPS до `api.telegram.org` перехватывает антивирус или прокси. Для быстрого локального теста можно добавить в `.env`:
+
+```env
+TELEGRAM_SSL_VERIFY=0
+```
+
+На Railway оставляй `TELEGRAM_SSL_VERIFY=1`. Более правильный локальный вариант - экспортировать root certificate прокси/антивируса в `.pem` и указать путь:
+
+```env
+TELEGRAM_CA_FILE=C:\path\to\root-ca.pem
+```
+
 ## Про большие файлы Telegram
 
 Обычный `https://api.telegram.org` дает ботам скачивать файлы только до 20 MB. Поэтому длинные записи будут работать только если они сильно сжаты и меньше лимита.

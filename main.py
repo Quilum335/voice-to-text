@@ -5,6 +5,7 @@ import math
 import os
 import shutil
 import signal
+import ssl
 import sqlite3
 import subprocess
 import time
@@ -42,6 +43,8 @@ MODEL = None
 class Settings:
     bot_token: str
     telegram_api_base: str
+    telegram_ssl_verify: bool
+    telegram_ca_file: Path | None
     work_dir: Path
     db_path: Path
     default_language: str
@@ -75,6 +78,8 @@ class Settings:
         return cls(
             bot_token=token,
             telegram_api_base=telegram_api_base,
+            telegram_ssl_verify=env_flag("TELEGRAM_SSL_VERIFY", "1"),
+            telegram_ca_file=optional_path("TELEGRAM_CA_FILE"),
             work_dir=work_dir,
             db_path=db_path,
             default_language=default_language,
@@ -93,8 +98,28 @@ def env_flag(name: str, default: str = "0") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def optional_path(name: str) -> Path | None:
+    value = os.getenv(name, "").strip()
+    return Path(value).expanduser().resolve() if value else None
+
+
 class TelegramError(RuntimeError):
     pass
+
+
+def create_telegram_connector(settings: Settings) -> aiohttp.TCPConnector | None:
+    if settings.telegram_api_base.startswith("http://"):
+        return None
+
+    if not settings.telegram_ssl_verify:
+        logging.warning("Telegram SSL certificate verification is disabled")
+        return aiohttp.TCPConnector(ssl=False)
+
+    if settings.telegram_ca_file is not None:
+        context = ssl.create_default_context(cafile=str(settings.telegram_ca_file))
+        return aiohttp.TCPConnector(ssl=context)
+
+    return None
 
 
 class TelegramClient:
@@ -871,7 +896,12 @@ async def main() -> None:
     store = Store(settings.db_path)
     store.mark_unfinished_interrupted()
 
-    async with aiohttp.ClientSession() as session:
+    connector = create_telegram_connector(settings)
+    session_kwargs: dict[str, Any] = {}
+    if connector is not None:
+        session_kwargs["connector"] = connector
+
+    async with aiohttp.ClientSession(**session_kwargs) as session:
         telegram = TelegramClient(settings, session)
         bot = TranscriptionBot(settings, telegram, store)
         install_signal_handlers(bot)
